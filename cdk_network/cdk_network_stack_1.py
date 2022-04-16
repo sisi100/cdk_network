@@ -7,6 +7,8 @@ VPC_CIDR = "10.11.0.0/16"
 PRIVATE_SUBNET_1_CIDR = "10.11.10.0/24"
 PRIVATE_SUBNET_2_CIDR = "10.11.20.0/24"
 
+SUBNETS_NAME = "HogePrivate"
+
 
 class CdkNetworkStack1(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -20,19 +22,21 @@ class CdkNetworkStack1(Stack):
             max_azs=2,
             subnet_configuration=[
                 aws_ec2.SubnetConfiguration(
-                    name="Private",
+                    name=SUBNETS_NAME,
                     cidr_mask=24,
                     subnet_type=aws_ec2.SubnetType.PRIVATE_ISOLATED,
                 )
             ],
         )
         # SubnetのCidrBlockを上書きする
-        selection = vpc.select_subnets(subnet_type=aws_ec2.SubnetType.PRIVATE_ISOLATED)
+        selection = vpc.select_subnets(
+            subnet_group_name=SUBNETS_NAME,
+        )
         for cider, subnet in zip(
             [PRIVATE_SUBNET_1_CIDR, PRIVATE_SUBNET_2_CIDR], selection.subnets
         ):
-            cfn_subnet = subnet.node.default_child
-            cfn_subnet.add_property_override("CidrBlock", cider)
+            cfn_subnet: aws_ec2.CfnSubnet = subnet.node.default_child
+            cfn_subnet.cidr_block = cider
 
         # （おまけ）VPCにLambdaを乗せる場合の設定例
 
